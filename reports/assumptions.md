@@ -15,18 +15,24 @@ Every simulated number in this project comes from a rate listed here. Each is a 
 
 | # | Assumption | Value used |
 | --- | --- | --- |
-| S1 | Leads per injury crash in the firm's county | Set per state so each office averages a realistic monthly lead volume |
-| S2 | Lead-to-signed conversion | 20–35%, by case type |
+| S1 | Monthly leads per office | 120 × office market size (0.45 Savannah to 1.35 Houston) × crash demand index × trend × marketing effect. About 1,700 leads a month firm-wide |
+| S2 | Lead-to-signed conversion | Base 16–26% by case type, lifted by fast callbacks and referrals; about 28–30% overall |
 | S3 | Response-time effect (**planted**) | Leads called back within 5 minutes sign about 1.5× as often as leads called back after 1 hour |
 | S4 | Winter effect (**planted**) | Michigan and Ohio auto leads rise in December–February with snowfall |
 | S5 | Contingency fee | 33% pre-suit, 40% after suit is filed |
 | S6 | Share of cases that go to suit | 15–30%, higher for truck and wrongful death |
 | S7 | Settlement value | Lognormal by case type and state; truck and wrongful death highest |
 | S8 | Time from sign to payment | Median 12–18 months; longer for truck and wrongful death |
-| S9 | Marketing effect | Diminishing returns on monthly spend per market |
-| S10 | Staff roles | Intake specialist, case manager, demand writer, litigation paralegal, associate attorney |
+| S9 | Marketing effect | $75,000 a month × market size, about $10M a year (about 11% of fees). Leads rise with spend^0.35 (diminishing returns). Campaigns: Houston TV from Mar 2021 (+60%), Atlanta digital from Sep 2023 (+50%) |
+| S10 | Staff roles and capacity | Intake specialist 60 leads/month; case manager 70 open cases; demand writer 250 open cases; litigation paralegal 60 open suits; associate attorney 150 open cases. Staffed to 90% of trailing workload, with a 2–4 month hiring lag |
 | S11 | Turnover effect (**planted**) | Case managers above 1.3× benchmark caseload leave about twice as often |
 | S12 | Random seed | Fixed (42), so every run is reproducible |
+| S13 | Firm history | Simulated from Jan 2013 so caseloads and payments are mature by 2017, the first year of public data. Analysis uses 2017 onward |
+| S14 | Snapshot date | 31 Dec 2025. Cases not paid by then are Open, with no settlement yet |
+| S15 | Lost cases | 8% of signed cases end with no recovery |
+| S16 | Florida tort reform | Case values ×0.85 for Florida cases signed after 24 Mar 2023 |
+| S17 | COVID | Leads ×0.70 / 0.75 / 0.85 in Apr / May / Jun 2020 (fewer minor crashes in lockdown) |
+| S18 | Staff turnover | Base monthly quit rate 1.5–3.5% by role; ×1.4 in Jan–Mar (after bonuses), ×1.2 in Jul–Aug; ×1.3 when any role is overloaded |
 
 ## Known limitations
 

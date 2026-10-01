@@ -1,0 +1,13 @@
+office_id,office,state_abbr,county_fips,market_size
+DET,Detroit,MI,26163,1.0
+GRR,Grand Rapids,MI,26081,0.55
+CMH,Columbus,OH,39049,0.85
+CLE,Cleveland,OH,39035,0.8
+PHL,Philadelphia,PA,42101,1.05
+PIT,Pittsburgh,PA,42003,0.7
+ATL,Atlanta,GA,13121,1.1
+SAV,Savannah,GA,13051,0.45
+MIA,Miami,FL,12086,1.25
+TPA,Tampa,FL,12057,0.9
+HOU,Houston,TX,48201,1.35
+DAL,Dallas,TX,48113,1.15

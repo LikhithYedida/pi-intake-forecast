@@ -38,3 +38,43 @@ All raw-layer checks are saved in `sql/checks/raw_checks.sql`, with expected res
 
 ### Next
 - Simulate the firm layer (leads, cases, payments, spend, staff) on top of the real crash patterns.
+
+## 2026-10-01: Day 1, continued
+
+### Firm simulation
+- Wrote `pipelines/simulate_firm.py`. It reads the real FARS crashes and NOAA weather, then generates the firm's internal data for 12 offices, Jan 2013 to Dec 2024.
+- Output tables, saved to `data/simulated/` and loaded to BigQuery `raw.sim_*`:
+
+| Table | Grain | Approx. rows |
+| --- | --- | --- |
+| `sim_offices` | office | 12 |
+| `sim_leads` | lead | 200,000 |
+| `sim_cases` | signed case | 57,000 |
+| `sim_marketing_spend` | office × month × channel | 6,900 |
+| `sim_employees` | employee | 1,000 |
+| `sim_employee_months` | employee × month | 29,000 |
+
+- True planted values are saved in `data/simulated/planted_truth.json`, so validation can compare against them later.
+
+### Tuning (tested before handing over)
+
+| Run | Problem | Fix |
+| --- | --- | --- |
+| 1 | Sign rate 42%; fees about $150M a year, too large for a mid-sized firm | Lowered base sign rates by about 28%; base leads 160 → 120 |
+| 2 | Staff rarely overloaded (2%); more attorneys than case managers | Staffing at 90% of workload; case manager capacity 70, attorney 150; marketing raised to about 11% of fees; warm-up from 2013 |
+| 3 | Intake still overstaffed, because 1–2 people per office rounds up | Intake capacity set to 60 qualified leads a month, so teams are larger and load varies |
+
+### Simulation checks (test run with stand-in inputs)
+
+| Planted effect | Planted | Recovered |
+| --- | --- | --- |
+| S3: callback within 5 min vs over 60 min | 1.5× | 1.46× (31.9% vs 21.9%) |
+| S11: overloaded case manager monthly quit rate | 2.0× | 1.9× (4.5% vs 2.4%) |
+| S4: MI/OH auto leads per snow day | +0.020 | +0.013 (simple check; the model will add controls) |
+
+- Firm profile: about $85–95M in fees a year, $10M marketing, about 240 staff, overall sign rate 28%.
+- Staffing affects outcomes: office-months in the slowest callback quartile sign 26.2% vs 31.0% in the fastest.
+
+### Next
+- Run the simulator on the real inputs and load to BigQuery.
+- Build the clean and mart SQL layers.
