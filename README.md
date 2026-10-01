@@ -59,7 +59,7 @@ reports/           scope, assumptions, director brief, model card
 
 - [x] Environment, BigQuery and GitHub setup
 - [x] Scope and assumptions
-- [ ] Public data pull
+- [x] Public data pull (FARS crashes, NOAA weather, Census population)
 - [ ] Firm simulation
 - [ ] SQL layers
 - [ ] Seasonality analysis and models
