@@ -6,6 +6,11 @@
 -- Grain   : office x year x month (12 offices x 96 months = 1,152 rows)
 -- Method  : All GHCN stations within 25 km of each office are averaged.
 --           Only readings with no quality flag (qflag IS NULL) are used.
+--           Each measure is averaged ONLY across stations that report that
+--           measure for at least 15 days of the month. (v2 fix: rain-only
+--           stations used to count as "0 snow" and understated snowfall.)
+--           If no nearby station reports snow (southern offices), snow = 0
+--           and snow_stations = 0 shows that it was not measured.
 -- Units   : precip_mm, snowfall_mm in millimetres; avg_high_c in Celsius.
 --           rain_days = days with >= 2.5 mm rain; freeze_days = days with min below 0 C.
 -- Run in  : BigQuery console (about 10 GB scanned, within the free tier)
@@ -43,26 +48,31 @@ daily AS (
 ),
 station_month AS (
   SELECT st.office, st.state_abbr, st.county_fips, d.id,
-         EXTRACT(YEAR FROM d.date) AS year,
+         EXTRACT(YEAR FROM d.date)  AS year,
          EXTRACT(MONTH FROM d.date) AS month,
-         SUM(IF(d.element = 'PRCP', d.value, 0)) / 10      AS precip_mm,
-         SUM(IF(d.element = 'SNOW', d.value, 0))           AS snowfall_mm,
-         COUNTIF(d.element = 'SNOW' AND d.value > 0)       AS snow_days,
-         COUNTIF(d.element = 'PRCP' AND d.value >= 25)     AS rain_days,
-         COUNTIF(d.element = 'TMIN' AND d.value < 0)       AS freeze_days,
-         AVG(IF(d.element = 'TMAX', d.value / 10, NULL))   AS avg_high_c
+         -- days of readings per measure, used to drop stations that do not measure it
+         COUNTIF(d.element = 'PRCP') AS prcp_obs,
+         COUNTIF(d.element = 'SNOW') AS snow_obs,
+         COUNTIF(d.element = 'TMIN') AS tmin_obs,
+         SUM(IF(d.element = 'PRCP', d.value, 0)) / 10    AS precip_mm,
+         SUM(IF(d.element = 'SNOW', d.value, 0))         AS snowfall_mm,
+         COUNTIF(d.element = 'SNOW' AND d.value > 0)     AS snow_days,
+         COUNTIF(d.element = 'PRCP' AND d.value >= 25)   AS rain_days,
+         COUNTIF(d.element = 'TMIN' AND d.value < 0)     AS freeze_days,
+         AVG(IF(d.element = 'TMAX', d.value / 10, NULL)) AS avg_high_c
   FROM daily d
   JOIN stations st ON d.id = st.id
   GROUP BY 1, 2, 3, 4, 5, 6
 )
 SELECT office, state_abbr, county_fips, year, month,
-       COUNT(DISTINCT id)          AS stations_used,
-       ROUND(AVG(precip_mm), 1)    AS precip_mm,
-       ROUND(AVG(snowfall_mm), 1)  AS snowfall_mm,
-       ROUND(AVG(snow_days), 1)    AS snow_days,
-       ROUND(AVG(rain_days), 1)    AS rain_days,
-       ROUND(AVG(freeze_days), 1)  AS freeze_days,
-       ROUND(AVG(avg_high_c), 1)   AS avg_high_c
+       COUNT(DISTINCT id)                                        AS stations_used,
+       COUNTIF(snow_obs >= 15)                                   AS snow_stations,
+       ROUND(AVG(IF(prcp_obs >= 15, precip_mm, NULL)), 1)        AS precip_mm,
+       ROUND(COALESCE(AVG(IF(snow_obs >= 15, snowfall_mm, NULL)), 0), 1) AS snowfall_mm,
+       ROUND(COALESCE(AVG(IF(snow_obs >= 15, snow_days, NULL)), 0), 1)   AS snow_days,
+       ROUND(AVG(IF(prcp_obs >= 15, rain_days, NULL)), 1)        AS rain_days,
+       ROUND(AVG(IF(tmin_obs >= 15, freeze_days, NULL)), 1)      AS freeze_days,
+       ROUND(AVG(avg_high_c), 1)                                 AS avg_high_c
 FROM station_month
 GROUP BY 1, 2, 3, 4, 5
 ORDER BY office, year, month;

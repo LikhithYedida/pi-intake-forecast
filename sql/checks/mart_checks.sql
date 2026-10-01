@@ -37,9 +37,22 @@ SELECT
   COUNTIF(snow_days IS NULL)           AS months_missing_weather
 FROM `pi-intake-forecast.mart.office_month`;
 
--- Check 6: every closed case has a margin, and no open case has one.
+-- Check 6: every closed case has a contribution margin, and no open case has one.
 -- Expect: 0 and 0
 SELECT
-  COUNTIF(status = 'Closed' AND margin IS NULL)   AS closed_without_margin,
-  COUNTIF(status = 'Open' AND margin IS NOT NULL) AS open_with_margin
+  COUNTIF(status = 'Closed' AND contribution_margin IS NULL)   AS closed_without_margin,
+  COUNTIF(status = 'Open' AND contribution_margin IS NOT NULL) AS open_with_margin
 FROM `pi-intake-forecast.mart.case_economics`;
+
+-- Check 7: won cases absorb no case costs (v2 fix: costs are reimbursed from settlements).
+-- Expect: 0
+SELECT COUNTIF(NOT is_lost AND firm_absorbed_costs > 0) AS won_cases_charged_costs
+FROM `pi-intake-forecast.mart.case_economics`
+WHERE status = 'Closed';
+
+-- Check 8: margin components add up.
+-- Expect: difference = 0
+SELECT ROUND(SUM(ROUND(fee - firm_absorbed_costs - staff_cost - marketing_cost, 2))
+             - SUM(contribution_margin), 2) AS difference
+FROM `pi-intake-forecast.mart.case_economics`
+WHERE status = 'Closed';

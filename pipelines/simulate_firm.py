@@ -21,6 +21,7 @@ Outputs (CSV in data/simulated/, and BigQuery tables in the raw dataset)
 Run from the project root:
   python pipelines/simulate_firm.py              # simulate and load to BigQuery
   python pipelines/simulate_firm.py --no-upload  # simulate and save CSVs only
+  python pipelines/simulate_firm.py --refresh-weather  # after rebuilding raw.weather_monthly
 """
 from __future__ import annotations
 
@@ -128,12 +129,12 @@ OTHER_OVERLOAD_QUIT_MULT = 1.3
 # ---------------------------------------------------------------------------
 # Inputs
 # ---------------------------------------------------------------------------
-def load_inputs() -> tuple[pd.DataFrame, pd.DataFrame]:
+def load_inputs(refresh_weather: bool = False) -> tuple[pd.DataFrame, pd.DataFrame]:
     if not FARS_CSV.exists():
         raise SystemExit(f"{FARS_CSV} not found. Run pipelines/pull_fars.py first.")
     fars = pd.read_csv(FARS_CSV)
 
-    if WEATHER_CACHE.exists():
+    if WEATHER_CACHE.exists() and not refresh_weather:
         weather = pd.read_csv(WEATHER_CACHE)
     else:
         from google.cloud import bigquery
@@ -466,10 +467,12 @@ def save_and_upload(tables: dict[str, pd.DataFrame], upload: bool) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--no-upload", action="store_true", help="save CSVs only, skip BigQuery")
+    parser.add_argument("--refresh-weather", action="store_true",
+                        help="re-read raw.weather_monthly from BigQuery instead of the local cache")
     args = parser.parse_args()
 
     print("Loading inputs...")
-    fars, weather = load_inputs()
+    fars, weather = load_inputs(refresh_weather=args.refresh_weather)
     print("Simulating 12 offices, 2013-2024 (this takes a few minutes)...")
     tables = simulate(fars, weather)
     summarize(tables)

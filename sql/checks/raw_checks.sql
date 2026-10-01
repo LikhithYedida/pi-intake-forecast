@@ -30,10 +30,21 @@ GROUP BY office
 ORDER BY avg_monthly_snow_mm DESC;
 
 -- Check 4: Weather completeness.
--- Expect: 12 offices x 96 months = 1,152 rows, and no month with 0 stations.
+-- Expect: 1,152 rows; no month without stations; no month missing rain or freeze data.
 SELECT COUNT(*) AS office_months,
-       COUNTIF(stations_used = 0) AS months_without_stations
+       COUNTIF(stations_used = 0)    AS months_without_stations,
+       COUNTIF(precip_mm IS NULL)    AS months_missing_precip,
+       COUNTIF(freeze_days IS NULL)  AS months_missing_freeze
 FROM `pi-intake-forecast.raw.weather_monthly`;
+
+-- Check 4b: Snow is measured where it matters (v2 fix).
+-- Expect: every Michigan, Ohio and Pennsylvania office has snow-reporting
+-- stations in Dec-Feb; southern offices may show 0 (no snow measured = none).
+SELECT office, MIN(snow_stations) AS min_snow_stations_in_winter
+FROM `pi-intake-forecast.raw.weather_monthly`
+WHERE month IN (12, 1, 2)
+GROUP BY office
+ORDER BY min_snow_stations_in_winter;
 
 -- Check 5: Population covers our 12 office counties.
 -- Expect: 12 rows, one per office county, each with a recent total_pop.

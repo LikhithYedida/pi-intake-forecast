@@ -115,3 +115,40 @@ All six `raw.sim_*` tables loaded to BigQuery. The raw layer is complete.
 - **Zero months kept.** The forecasting grid includes office, case type and month combinations with no leads, so models see true zeros rather than gaps.
 - **Capture index, not market share.** FARS counts fatal crashes only, so signed cases per fatal crash is used as a demand-relative index, compared over time rather than read as a literal share.
 - **Marketing cost per case** is the office-month spend divided by cases signed that month. This is a simple, auditable allocation; channel-level attribution is Phase 2.
+
+### Warehouse results
+- `run_sql.py` built all 13 tables. All 6 mart checks passed: 9,216 and 1,152 rows as expected; 136,728 leads and $950.8M in fees reconcile from raw to mart with zero difference; no gaps in crash or weather inputs.
+
+## 2026-10-01: Senior review and fixes (v2)
+
+A critical review of everything built so far, before any analysis reaches leadership.
+
+### Correctness fixes
+| # | Issue | Why it matters | Fix |
+| --- | --- | --- | --- |
+| 1 | Case costs subtracted on every case | In PI, the firm advances costs but recovers them from the settlement on won cases. Charging them on every case understated profit | `firm_absorbed_costs` = case costs on lost cases only (assumption S20) |
+| 2 | "Margin" excluded overhead but did not say so | A director would ask where intake staff, rent and admin went | Renamed to `contribution_margin`, defined in the SQL header and the data dictionary |
+| 3 | Snowfall understated | Rain-only weather stations counted as "0 snow" and pulled averages down | Each weather measure is averaged only across stations reporting it for 15+ days; `snow_stations` shows coverage (assumption D4) |
+
+### Senior-level upgrades
+| # | Upgrade | Value |
+| --- | --- | --- |
+| 4 | `pipelines/make_data_dictionary.py` | Generates `reports/data_dictionary.md` from the live warehouse, with a business glossary, and writes table and column descriptions into BigQuery so Looker Studio shows them |
+| 5 | README architecture | Mermaid diagram, trust-and-quality controls, one-page reproduce steps |
+| 6 | `tests/test_planted_effects.py` | Plant-and-recover as automated tests, including a placebo |
+
+### Lesson from building the tests
+The first version used fixed tolerances. The placebo (Pennsylvania snow, not planted) failed at -0.027, a reminder that:
+1. **Sampling noise must set the bar.** Two offices give a noisy estimate. Small effects are now judged by a 95% confidence interval, not a fixed range.
+2. **Controls matter.** On real data, snow also changes real crash counts, which feed demand. The snow test holds the state crash signal constant, so a real weather effect is not mistaken for the planted one.
+After the change, all 5 tests passed in the offline test run.
+
+### New checks
+- `mart_checks.sql` Check 7: won cases absorb no case costs. Check 8: margin components add up.
+- `raw_checks.sql` Check 4b: snow is measured at every northern office in winter.
+
+### v2.1: edge case caught by Check 6
+- After the rebuild, 7 of 8 checks passed. Check 6 found **20 closed cases with no contribution margin**.
+- Cause: leads from the last days of December 2024 that signed in January 2025. Marketing cost was allocated by **sign month**, and there is no spend data for 2025.
+- Fix: allocate marketing cost by **lead month**. This is also the better model, since marketing creates the lead, not the signature. `mart.case_economics` now carries `lead_month`.
+- Takeaway: completeness checks on derived metrics catch boundary-of-data problems that row counts never will.

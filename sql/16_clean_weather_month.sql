@@ -8,6 +8,7 @@ SELECT
   o.office_id,
   DATE(w.year, w.month, 1) AS month,
   w.stations_used,
+  w.snow_stations,
   w.precip_mm,
   w.snowfall_mm,
   w.snow_days,

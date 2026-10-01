@@ -9,7 +9,7 @@ Every simulated number in this project comes from a rate listed here. Each is a 
 | D1 | FARS fatal crashes are used as the **seasonal demand signal**, not as total injury volume | Fatal and injury crashes follow similar seasonal and geographic patterns; state injury data is added in Phase 2 |
 | D2 | Monthly FARS counts are scaled up to injury-crash volume with a fixed ratio per state | Keeps the real seasonal shape while giving realistic lead volumes |
 | D3 | Each office serves its home county | Keeps the market definition simple and auditable |
-| D4 | Weather comes from the GHCN-Daily station nearest each county center | Standard practice for county-level weather features |
+| D4 | Weather is averaged across GHCN-Daily stations within 25 km of each office; each measure uses only stations that report it for 15+ days of the month | Robust to single-station gaps; avoids rain-only stations counting as zero snow |
 
 ## Firm simulation assumptions
 
@@ -34,6 +34,7 @@ Every simulated number in this project comes from a rate listed here. Each is a 
 | S17 | COVID | Leads ×0.70 / 0.75 / 0.85 in Apr / May / Jun 2020 (fewer minor crashes in lockdown) |
 | S18 | Staff turnover | Base monthly quit rate 1.5–3.5% by role; ×1.4 in Jan–Mar (after bonuses), ×1.2 in Jul–Aug; ×1.3 when any role is overloaded |
 | S19 | Loaded staff cost per hour (for case margin) | Case manager $45, associate attorney $150, litigation paralegal $40 |
+| S20 | Case costs | The firm advances case costs (2-6% of settlement, plus $3k-15k if in suit). Won cases reimburse them from the settlement; lost cases are absorbed by the firm. Only absorbed costs reduce contribution margin |
 
 ## Known limitations
 
