@@ -319,6 +319,31 @@ def strongest_case_types(idx: pd.DataFrame, n: int = 3) -> pd.DataFrame:
     return ok.nlargest(n, "season_lift")
 
 
+def counter_seasonal_states(idx: pd.DataFrame) -> pd.DataFrame:
+    """States whose calendar runs against the firm's: negative correlation with the firm index.
+    These offices are quiet when the firm is busy, so their intake staff can absorb overflow."""
+    firm = idx[(idx["state_abbr"] == "Firm") & (idx["case_type"] == "All case types")].set_index("month_num")["index"]
+    rows = []
+    for state in STATE_ORDER:
+        s = idx[(idx["state_abbr"] == state) & (idx["case_type"] == "All case types")].set_index("month_num")["index"]
+        rows.append(dict(state=state, corr=float(np.corrcoef(s.reindex(range(1, 13)), firm.reindex(range(1, 13)))[0, 1]),
+                         peak=season_window(s), trough=season_window(s, peak=False)))
+    out = pd.DataFrame(rows)
+    return out[out["corr"] < 0].sort_values("corr")
+
+
+def winter_hypothesis(idx: pd.DataFrame) -> dict:
+    """Test the starting hypothesis that MI and OH auto intake rises in winter (Dec-Feb)."""
+    d = idx[idx["state_abbr"].isin(["MI", "OH"]) & (idx["case_type"] == "Auto") & idx["month_num"].isin([12, 1, 2])]
+    lift = float(d["index"].mean() - 100)
+    peaks = {st: season_window(idx[(idx["state_abbr"] == st) & (idx["case_type"] == "Auto")]
+                               .set_index("month_num")["index"]) for st in ["MI", "OH"]}
+    above = lift > 0 and bool(d["significant"].any())
+    winter_peak = any(set(w) & {12, 1, 2} for w in peaks.values())
+    verdict = "Supported" if above and winter_peak else "Partly supported" if above else "Not supported"
+    return dict(lift=lift, verdict=verdict, peaks=peaks)
+
+
 def season_start_name(months: list[int]) -> str:
     return MONTHS[season_start(months) - 1]
 
@@ -341,6 +366,7 @@ def write_report(idx: pd.DataFrame, fees: dict, pressure: pd.DataFrame, cost: di
     firm_types = idx[(idx["state_abbr"] == "Firm") & (idx["case_type"] != "All case types")]
     type_swing = firm_types.groupby("case_type")["index"].agg(lambda s: s.max() - s.min()).sort_values()
     loses_cases = cost["lost_cases"] > 0
+    winter = winter_hypothesis(idx)
     hire_by = MONTHS[(season_start(cost["months"]) - 3) % 12]   # ~2 months before intake hits capacity
 
     findings = [
@@ -362,9 +388,24 @@ def write_report(idx: pd.DataFrame, fees: dict, pressure: pd.DataFrame, cost: di
         f"**Case types move on different calendars.** Firm-wide, {type_swing.index[-1].lower()} is the most "
         f"seasonal case type ({type_swing.iloc[-1]:.0f}-point swing) and {type_swing.index[0].lower()} the steadiest "
         f"({type_swing.iloc[0]:.0f} points). Marketing creative and intake scripts should rotate with them.")
+    counter = counter_seasonal_states(idx)
+    firm_peak = season_text(firm["peak3"])
+    pooling_finding = None
+    if len(counter):
+        names = [STATE_NAMES[s] for s in counter["state"]]
+        detail = "; ".join(f"{STATE_NAMES[r.state]} peaks {season_text(r.peak)} and is quietest {season_text(r.trough)}"
+                           for r in counter.itertuples())
+        pooling_finding = len(findings) + 1
+        findings.append(
+            f"**{' and '.join(names)} run{'s' if len(names) == 1 else ''} opposite to the firm.** {detail}, "
+            f"while the firm as a whole peaks {firm_peak}. Intake staff in "
+            f"{'that office' if len(names) == 1 else 'those offices'} are least busy exactly when the rest of the "
+            f"firm is busiest: a shared virtual intake team can cover peaks with existing headcount.")
     staffing_finding = len(findings) + 1
+    n_busy = len(cost["months"])
     capacity = (f"**Intake reaches capacity in {season_text(cost['months'])}.** Average intake load is "
-                f"{cost['busy_load']:.2f}x in those months vs {cost['rest_load']:.2f}x otherwise; median callback "
+                f"{cost['busy_load']:.2f}x {'in that month' if n_busy == 1 else 'in those months'} vs "
+                f"{cost['rest_load']:.2f}x otherwise; median callback "
                 f"slows from {cost['rest_callback']:.0f} to {cost['busy_callback']:.0f} minutes, and the share of leads "
                 f"called within 5 minutes falls from {cost['rest_within_5']:.0%} to {cost['busy_within_5']:.0%}. ")
     if loses_cases:
@@ -413,11 +454,33 @@ def write_report(idx: pd.DataFrame, fees: dict, pressure: pd.DataFrame, cost: di
         f"| Director of Operations | Finding {staffing_finding} |",
         "| Staffing | Set each office's intake calendar from its own state's index, not a firm-wide average "
         "| Office managers | Finding 1 |",
+        *([f"| Staffing | Pilot a shared virtual intake queue so {' and '.join(STATE_NAMES[s] for s in counter['state'])} "
+           f"intake covers overflow from busy offices in {firm_peak} (and the reverse in "
+           f"{'its' if len(counter) == 1 else 'their'} own peak) "
+           f"| Director of Operations | Finding {pooling_finding} |"] if pooling_finding else []),
         f"| Marketing | Shift spend into the 4-6 weeks before each state's peak season; trim in the trough "
         f"({season_text(firm['low3'])} firm-wide) | Marketing | Headline, Finding 1 |",
         f"| Marketing | Rotate ad creative by case type with its season | Marketing | Findings 2-{type_finding} |",
         "| Performance | Judge office intake against its own seasonal expectation, not last month | Director "
         "| Seasonal index (`mart.seasonal_index`) |",
+        "",
+        "## Hypotheses tested",
+        "",
+        "| Starting hypothesis | Result | What it means |",
+        "| --- | --- | --- |",
+        f"| Michigan and Ohio auto intake rises in winter (ice) | "
+        f"{winter['verdict']}: MI/OH auto runs {winter['lift']:+.0f}% in Dec-Feb; "
+        f"peak seasons are Michigan {season_text(winter['peaks']['MI'])}, Ohio {season_text(winter['peaks']['OH'])} | "
+        + {"Supported": "Winter staffing for auto is justified by the data.",
+           "Partly supported": "Winter runs above an average month, but the main auto peak is elsewhere. Staff for the "
+                               "main peak first; confirm the winter lift with injury-crash data (Phase 2).",
+           "Not supported": "Demand here is driven by fatal-crash patterns, which peak with summer driving. Winter "
+                            "crashes are more frequent but less often fatal, so fatal-crash data likely understates "
+                            "winter injury demand. Do not staff for a winter auto surge yet; test it with Michigan "
+                            "and Ohio injury-crash data (Phase 2)."}[winter["verdict"]] + " |",
+        f"| Seasonality is the same across the firm | Not supported: swings range from {flattest['swing']:.0f} to "
+        f"{biggest['swing']:.0f} points{', and ' + ' and '.join(STATE_NAMES[s] for s in counter['state']) + ' runs opposite' if len(counter) else ''} "
+        "| Plan by office, not firm-wide |",
         "",
         "## State calendar",
         "",

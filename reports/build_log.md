@@ -175,3 +175,14 @@ After the change, all 5 tests passed in the offline test run.
 | 5 | Hiring advice dated from the case peak (Jul), after intake was already at capacity (May) | Hire 6-8 weeks before intake reaches capacity |
 | 6 | "Ohio auto peaks Jun-Aug (top month Dec)" read as a contradiction | Series ranked and described by season strength |
 | 7 | Chart subtitle clipped; bar label on the capacity line | Shortened; labels inside the bars |
+
+### Results on real data, and the review that followed
+First run on the real warehouse: the firm peaks Aug-Oct (+7% in Oct, -10% in Feb); Michigan has the largest swing (43 points); Georgia the flattest (13). Reading the output as a director would surfaced three gaps:
+
+| # | Gap | Change |
+| --- | --- | --- |
+| 1 | **Florida runs opposite to the firm** (peak Oct-Dec, trough Jun-Aug, when the north is busiest). The most actionable insight, and the report did not say it | New finding: states negatively correlated with the firm index are detected automatically, with a recommendation to pilot a shared virtual intake queue (cover peaks with existing headcount) |
+| 2 | **The starting hypothesis was contradicted.** README claimed MI/OH auto rises with winter ice; Michigan auto actually peaks Jul-Sep in fatal-crash-driven demand | New "Hypotheses tested" section with a Supported / Partly / Not supported verdict. README rewritten to say what was confirmed and overturned. Explanation: winter crashes are frequent but less often fatal, so FARS understates winter injury demand; test with state injury-crash data (Phase 2) |
+| 3 | "Capacity in Aug ... in those months" | Singular and plural wording by month count |
+
+Lesson: a hypothesis in the README is a claim. When the data overturns it, the README changes, and the report says so.

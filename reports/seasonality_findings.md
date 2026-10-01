@@ -4,7 +4,7 @@
 
 ## Headline
 
-Firm-wide intake is seasonal: signed cases run **+7% in Oct** and **-10% in Feb** against an average month. The peak season (Aug-Oct) brings about **63 more signed cases a year** than three average months, worth **$1.1M in expected fees**. Intake is staffed close to flat, so at peak it runs at capacity and loses about $244K a year in fees (finding 6).
+Firm-wide intake is seasonal: signed cases run **+7% in Oct** and **-10% in Feb** against an average month. The peak season (Aug-Oct) brings about **63 more signed cases a year** than three average months, worth **$1.1M in expected fees**. Intake is staffed close to flat, so at peak it runs at capacity and loses about $244K a year in fees (finding 7).
 
 ## Findings
 
@@ -13,17 +13,26 @@ Firm-wide intake is seasonal: signed cases run **+7% in Oct** and **-10% in Feb*
 3. **Pennsylvania auto runs +11% in Jun-Aug** against an average month (about 33 signed cases in an average month). The season brings about 11 extra cases a year, worth $91K in expected fees.
 4. **Ohio auto runs +9% in May-Jul** against an average month (about 32 signed cases in an average month). The season brings about 9 extra cases a year, worth $62K in expected fees.
 5. **Case types move on different calendars.** Firm-wide, motorcycle is the most seasonal case type (88-point swing) and auto the steadiest (17 points). Marketing creative and intake scripts should rotate with them.
-6. **Intake reaches capacity in Aug.** Average intake load is 0.96x in those months vs 0.83x otherwise; median callback slows from 6 to 7 minutes, and the share of leads called within 5 minutes falls from 46% to 34%. Comparing each case type with itself (so the summer case mix is not mistaken for an intake problem), busy months sign 28.0% of leads vs 28.8% at normal-month rates: about **10 signed cases and $244K in expected fees a year** left on the table.
+6. **Florida runs opposite to the firm.** Florida peaks Oct-Dec and is quietest Jun-Aug, while the firm as a whole peaks Aug-Oct. Intake staff in that office are least busy exactly when the rest of the firm is busiest: a shared virtual intake team can cover peaks with existing headcount.
+7. **Intake reaches capacity in Aug.** Average intake load is 0.96x in that month vs 0.83x otherwise; median callback slows from 6 to 7 minutes, and the share of leads called within 5 minutes falls from 46% to 34%. Comparing each case type with itself (so the summer case mix is not mistaken for an intake problem), busy months sign 28.0% of leads vs 28.8% at normal-month rates: about **10 signed cases and $244K in expected fees a year** left on the table.
 
 ## Recommendations
 
 | Decision | Recommendation | Owner | Evidence |
 | --- | --- | --- | --- |
-| Staffing | Add seasonal or part-time intake capacity 6-8 weeks before each office's busy season; firm-wide, intake reaches capacity in Aug, so hire by early Jun | Director of Operations | Finding 6 |
+| Staffing | Add seasonal or part-time intake capacity 6-8 weeks before each office's busy season; firm-wide, intake reaches capacity in Aug, so hire by early Jun | Director of Operations | Finding 7 |
 | Staffing | Set each office's intake calendar from its own state's index, not a firm-wide average | Office managers | Finding 1 |
+| Staffing | Pilot a shared virtual intake queue so Florida intake covers overflow from busy offices in Aug-Oct (and the reverse in its own peak) | Director of Operations | Finding 6 |
 | Marketing | Shift spend into the 4-6 weeks before each state's peak season; trim in the trough (Dec-Feb firm-wide) | Marketing | Headline, Finding 1 |
 | Marketing | Rotate ad creative by case type with its season | Marketing | Findings 2-5 |
 | Performance | Judge office intake against its own seasonal expectation, not last month | Director | Seasonal index (`mart.seasonal_index`) |
+
+## Hypotheses tested
+
+| Starting hypothesis | Result | What it means |
+| --- | --- | --- |
+| Michigan and Ohio auto intake rises in winter (ice) | Not supported: MI/OH auto runs -11% in Dec-Feb; peak seasons are Michigan Jul-Sep, Ohio May-Jul | Demand here is driven by fatal-crash patterns, which peak with summer driving. Winter crashes are more frequent but less often fatal, so fatal-crash data likely understates winter injury demand. Do not staff for a winter auto surge yet; test it with Michigan and Ohio injury-crash data (Phase 2). |
+| Seasonality is the same across the firm | Not supported: swings range from 13 to 43 points, and Florida runs opposite | Plan by office, not firm-wide |
 
 ## State calendar
 

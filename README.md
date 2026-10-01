@@ -4,11 +4,11 @@
 
 ## The business problem
 
-Our firm runs 12 offices across Michigan, Ohio, Pennsylvania, Georgia, Florida and Texas. Today we plan staffing and marketing as if every month were the same. Case intake is strongly seasonal and differs by state:
+Our firm runs 12 offices across Michigan, Ohio, Pennsylvania, Georgia, Florida and Texas. Today we plan staffing and marketing as if every month were the same. Case intake is seasonal and differs by state. The analysis confirmed some starting hypotheses and overturned others:
 
-- Michigan and Ohio auto cases rise with winter ice.
-- Florida peaks with the winter tourist season.
-- Motorcycle and pedestrian cases climb in summer.
+- **Confirmed:** Florida runs opposite to the northern offices, busiest in fall and winter and quietest in summer.
+- **Confirmed:** Motorcycle cases are by far the most seasonal case type, concentrated in summer.
+- **Overturned:** "Michigan and Ohio auto cases rise with winter ice." Fatal-crash data peaks in summer instead. Winter crashes are more frequent but less often fatal, so this is tested next with state injury-crash data.
 
 The result: intake teams are stretched in peak months and idle in slow ones, ad budgets run flat, and office managers are judged on raw case counts that mostly reflect weather and traffic.
 
@@ -38,7 +38,7 @@ Separating demand from capture is what makes office performance fair to judge, a
 
 ![State seasonal calendar](reports/figures/seasonality_state_heatmap.png)
 
-Each state runs on its own intake calendar, and firm intake reaches capacity in the busy season, slowing callbacks.
+Each state runs on its own intake calendar, Florida runs opposite to the firm (a case for a shared intake team), and intake reaches capacity in the busy season, slowing callbacks.
 Full findings, dollar values and recommendations: [`reports/seasonality_findings.md`](reports/seasonality_findings.md).
 
 ## Architecture
