@@ -34,6 +34,13 @@ Fee revenue = Market demand × Capture rate × Value per case
 
 Separating demand from capture is what makes office performance fair to judge, and it is what turns the forecast into growth decisions.
 
+## Latest findings
+
+![State seasonal calendar](reports/figures/seasonality_state_heatmap.png)
+
+Each state runs on its own intake calendar, and firm intake reaches capacity in the busy season, slowing callbacks.
+Full findings, dollar values and recommendations: [`reports/seasonality_findings.md`](reports/seasonality_findings.md).
+
 ## Architecture
 
 ```mermaid
@@ -118,7 +125,8 @@ reports/           scope, assumptions, data dictionary, build log, director brie
 - [x] Firm simulation with planted effects
 - [x] Warehouse layers (clean, mart) with reconciliation checks
 - [x] Data dictionary and plant-and-recover tests
-- [ ] Seasonality analysis and models
+- [x] Seasonality analysis ([findings](reports/seasonality_findings.md))
+- [ ] Forecast model and backtest
 - [ ] Validation
 - [ ] Looker Studio dashboard
 - [ ] Director brief

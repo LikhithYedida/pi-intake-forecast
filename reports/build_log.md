@@ -152,3 +152,26 @@ After the change, all 5 tests passed in the offline test run.
 - Cause: leads from the last days of December 2024 that signed in January 2025. Marketing cost was allocated by **sign month**, and there is no spend data for 2025.
 - Fix: allocate marketing cost by **lead month**. This is also the better model, since marketing creates the lead, not the signature. `mart.case_economics` now carries `lead_month`.
 - Takeaway: completeness checks on derived metrics catch boundary-of-data problems that row counts never will.
+
+## 2026-10-01: Seasonality analysis
+
+### What was built
+- `notebooks/01_seasonality.py`: seasonal index per state and case type, findings in business language, three charts, and `mart.seasonal_index` in BigQuery for the Looker Studio calendar page.
+- Outputs: `reports/seasonality_findings.md` and `reports/figures/seasonality_*.png`.
+
+### Method
+- Index: each month's signed cases / that year's average month, averaged over 2017-2024 excluding COVID, x 100. Dividing by each year's own average removes growth and one-off years.
+- A peak or trough is only called when its 95% CI across years excludes 100.
+- Seasons are the best consecutive 3-month window, wrapping over New Year, because staffing and marketing plans need a season, not scattered months.
+- Dollar values use the expected fee per signed case (cases signed 2017-2022, lost cases at $0).
+
+### Self-review before release (tested on stand-in data)
+| # | Problem found | Fix |
+| --- | --- | --- |
+| 1 | Peak "seasons" were scattered months (e.g. Jul, Oct, Dec) | Best consecutive 3-month window |
+| 2 | Busy months picked as an arbitrary top 3, though September was equally loaded | Busy = average intake load of 0.95 or more |
+| 3 | Busy-month sign rate compared raw, so summer's case mix (more motorcycle, dog bite) could be blamed on intake | Mix-adjusted: each case type compared with itself |
+| 4 | Chart led with a weak number (0.6 pts) | Title leads with the operational fact: callbacks slow from 6 to 9 minutes |
+| 5 | Hiring advice dated from the case peak (Jul), after intake was already at capacity (May) | Hire 6-8 weeks before intake reaches capacity |
+| 6 | "Ohio auto peaks Jun-Aug (top month Dec)" read as a contradiction | Series ranked and described by season strength |
+| 7 | Chart subtitle clipped; bar label on the capacity line | Shortened; labels inside the bars |
