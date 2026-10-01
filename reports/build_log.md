@@ -75,6 +75,43 @@ All raw-layer checks are saved in `sql/checks/raw_checks.sql`, with expected res
 - Firm profile: about $85–95M in fees a year, $10M marketing, about 240 staff, overall sign rate 28%.
 - Staffing affects outcomes: office-months in the slowest callback quartile sign 26.2% vs 31.0% in the fastest.
 
-### Next
-- Run the simulator on the real inputs and load to BigQuery.
-- Build the clean and mart SQL layers.
+### Simulation results on real data (BigQuery checks)
+
+| Planted effect | Planted | Recovered on real data |
+| --- | --- | --- |
+| S3: callback within 5 min vs over 60 min | 1.5x | 1.47x (32.0% vs 21.8% sign rate) |
+| S11: overloaded case manager monthly quit rate | 2.0x | 2.15x (5.6% vs 2.6%) |
+
+All six `raw.sim_*` tables loaded to BigQuery. The raw layer is complete.
+
+## 2026-10-01: Warehouse layers
+
+### Clean layer (`sql/1x_*.sql`): tidy, keyed, flagged
+| File | Table | What it adds |
+| --- | --- | --- |
+| 10 | `clean.dim_month` | Calendar with COVID, Michigan reform, Florida reform and analysis-window flags |
+| 11 | `clean.dim_office` | 12 offices with state, county and market size |
+| 12 | `clean.leads` | Lead month and callback band (matches planted S3) |
+| 13 | `clean.cases` | Sign month, days to close, staff cost (assumption S19) |
+| 14 | `clean.fars_state_month` | Demand signal per state and month, split by case-type signal |
+| 15 | `clean.fars_county_year` | County crashes per 100k people, with an office flag (for the growth map) |
+| 16 | `clean.weather_month` | Weather keyed by office_id and month |
+| 17 | `clean.staff_month` | Overload flag at 1.3x (matches planted S11) |
+| 18 | `clean.marketing_spend` | Spend by office, month and channel |
+
+### Mart layer (`sql/2x_*.sql`): one table per business question
+| File | Table | Question it answers |
+| --- | --- | --- |
+| 20 | `mart.office_casetype_month` | What arrives, where and when? (forecasting) |
+| 21 | `mart.office_month` | How is each office performing against its market? (scorecard) |
+| 22 | `mart.case_economics` | What does each case earn after all costs? (profit) |
+| 23 | `mart.workforce_month` | Who is overloaded, who leaves, when? (hiring) |
+
+### How to rebuild
+- `python pipelines/run_sql.py` rebuilds every clean and mart table in order.
+- `python pipelines/run_sql.py --checks` runs `sql/checks/mart_checks.sql`: row counts, raw-to-mart reconciliation of leads and fees, input gaps, and margin completeness.
+
+### Design decisions
+- **Zero months kept.** The forecasting grid includes office, case type and month combinations with no leads, so models see true zeros rather than gaps.
+- **Capture index, not market share.** FARS counts fatal crashes only, so signed cases per fatal crash is used as a demand-relative index, compared over time rather than read as a literal share.
+- **Marketing cost per case** is the office-month spend divided by cases signed that month. This is a simple, auditable allocation; channel-level attribution is Phase 2.

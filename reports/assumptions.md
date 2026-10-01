@@ -33,6 +33,7 @@ Every simulated number in this project comes from a rate listed here. Each is a 
 | S16 | Florida tort reform | Case values ×0.85 for Florida cases signed after 24 Mar 2023 |
 | S17 | COVID | Leads ×0.70 / 0.75 / 0.85 in Apr / May / Jun 2020 (fewer minor crashes in lockdown) |
 | S18 | Staff turnover | Base monthly quit rate 1.5–3.5% by role; ×1.4 in Jan–Mar (after bonuses), ×1.2 in Jul–Aug; ×1.3 when any role is overloaded |
+| S19 | Loaded staff cost per hour (for case margin) | Case manager $45, associate attorney $150, litigation paralegal $40 |
 
 ## Known limitations
 
