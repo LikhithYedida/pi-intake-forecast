@@ -126,7 +126,6 @@ reports/           scope, assumptions, data dictionary, build log, director brie
 - [x] Warehouse layers (clean, mart) with reconciliation checks
 - [x] Data dictionary and plant-and-recover tests
 - [x] Seasonality analysis ([findings](reports/seasonality_findings.md))
-- [ ] Forecast model and backtest
-- [ ] Validation
+- [x] 12-month forecast, backtested against baselines ([report](reports/forecast_report.md))
 - [ ] Looker Studio dashboard
 - [ ] Director brief

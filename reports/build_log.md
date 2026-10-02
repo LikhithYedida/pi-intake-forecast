@@ -186,3 +186,25 @@ First run on the real warehouse: the firm peaks Aug-Oct (+7% in Oct, -10% in Feb
 | 3 | "Capacity in Aug ... in those months" | Singular and plural wording by month count |
 
 Lesson: a hypothesis in the README is a claim. When the data overturns it, the README changes, and the report says so.
+
+## 2026-10-01: 12-month forecast
+
+### What was built
+- `notebooks/02_forecast.py`: 48 state x case-type models for signed cases and 12 office models for leads. Firm and state totals are built bottom-up. Outputs: `reports/forecast_report.md`, two charts, and `mart.forecast_monthly` (backtest and 2025 rows) for Looker Studio.
+- Model: Poisson regression (level + month of year + trend + COVID flag), fitted by IRLS in plain numpy. PyPI was unreachable in the build environment, which turned into a design choice: no new dependency, and every coefficient is inspectable.
+- No future crash or weather data is used: neither is known on the day a forecast is made.
+
+### Validation design
+- Rolling origin: 2017-21 -> 2022, 2017-22 -> 2023, 2017-23 -> 2024.
+- Two spreadsheet-level baselines: same month last year, and the seasonal average. Metric: WAPE (robust to small months, unlike MAPE).
+- Unit test before use: the model recovered known coefficients from simulated data (trend 0.032 vs 0.030 true; COVID -0.27 vs -0.30), and its 80% ranges held 84% on simulated truth.
+
+### Self-review before release (stand-in data)
+| # | Problem found | Fix |
+| --- | --- | --- |
+| 1 | Headline annual range was the sum of monthly bounds, overstating uncertainty | Annual ranges from simulated annual totals |
+| 2 | Firm-level 80% range held only 67%: summing independent series assumes their surprises cancel, but real shocks hit many series at once | Point = bottom-up sum (levels add up); range width from a model fitted directly to the total. Firm coverage became 81%, state 79% |
+| 3 | 42 of 48 segments tiered "Low" on monthly error, unfair to small segments | Noise floor added (error a perfect forecast would still make on small counts); tiers on quarterly error, the grain small segments are planned at. Model runs at about 1.08x the noise floor |
+| 4 | The model was slightly worse than the seasonal average for small segments, and the report did not say so | Report now states plainly where the model does not win and recommends rolling small segments up |
+| 5 | Staffing table said "quietest Jan, busiest Jan" for flat offices | Shows "Flat all year" |
+| 6 | Accuracy chart led with the smallest gain (7%) | Data-driven title: beats the baseline at every level (7-20%), or says at how many levels it does |
