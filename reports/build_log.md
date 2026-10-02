@@ -220,7 +220,6 @@ Lesson: a hypothesis in the README is a claim. When the data overturns it, the R
 
 ### What was built
 - `sql/30-36_dash_*.sql`: seven views in `mart`, one per dashboard need: KPIs, seasonal calendar, forecast timeline, office scorecard, staffing plan, workforce, case profit. Views, not tables, so the dashboard always shows the latest build with nothing extra to refresh.
-- `reports/dashboard_guide.md`: page-by-page Looker Studio specification (charts, fields, filters, calculated fields, finding-led titles, publish checklist).
 - `run_sql.py` now builds the views too (`sql/3*.sql`) and reports them as views.
 - Checks 9-11: the dashboard forecast, history and contribution margin tie back to their warehouse sources.
 

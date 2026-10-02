@@ -1,43 +1,95 @@
 # Assumptions Log
 
-Every simulated number in this project comes from a rate listed here. Each is a stated assumption, not a measured fact. With a real firm's data, each row would be replaced by the measured value.
+This document records every assumption used to simulate firm activity and estimate personal injury case demand.
 
-## Data assumptions
+Every simulated number in this project comes from a stated assumption below. These values are not measured results from a real law firm. If real firm data were available, each simulated input would be replaced with the corresponding measured value.
 
-| # | Assumption | Why it is reasonable |
+The assumptions are separated into public-data assumptions and firm-simulation assumptions so that the boundary between observed data and simulated data remains clear.
+
+## Data Assumptions
+
+| # | Assumption | Why It Is Reasonable |
 | --- | --- | --- |
-| D1 | FARS fatal crashes are used as the **seasonal demand signal**, not as total injury volume | Fatal and injury crashes follow similar seasonal and geographic patterns; state injury data is added in Phase 2 |
-| D2 | Monthly FARS counts are scaled up to injury-crash volume with a fixed ratio per state | Keeps the real seasonal shape while giving realistic lead volumes |
-| D3 | Each office serves its home county | Keeps the market definition simple and auditable |
-| D4 | Weather is averaged across GHCN-Daily stations within 25 km of each office; each measure uses only stations that report it for 15+ days of the month | Robust to single-station gaps; avoids rain-only stations counting as zero snow |
+| D1 | FARS fatal crashes are used as the **seasonal demand signal**, not as total injury volume | Fatal and injury crashes follow similar seasonal and geographic patterns. State injury-crash data is planned for Phase 2. |
+| D2 | Monthly FARS counts are scaled to estimated injury-crash volume using a fixed ratio per state | Preserves the seasonal shape of the public crash data while producing realistic lead volumes for the simulation. |
+| D3 | Each office serves its home county | Keeps the market definition simple, consistent, and auditable. |
+| D4 | Weather is averaged across GHCN-Daily stations within 25 km of each office. Each measure uses only stations that report it for at least 15 days of the month | Reduces sensitivity to individual station gaps and prevents stations that do not report snowfall from being treated as having zero snow. |
 
-## Firm simulation assumptions
+## Firm Simulation Assumptions
 
-| # | Assumption | Value used |
+| # | Assumption | Value Used |
 | --- | --- | --- |
-| S1 | Monthly leads per office | 120 × office market size (0.45 Savannah to 1.35 Houston) × crash demand index × trend × marketing effect. About 1,700 leads a month firm-wide |
-| S2 | Lead-to-signed conversion | Base 16–26% by case type, lifted by fast callbacks and referrals; about 28–30% overall |
-| S3 | Response-time effect (**planted**) | Leads called back within 5 minutes sign about 1.5× as often as leads called back after 1 hour |
-| S4 | Winter effect (**planted**) | Michigan and Ohio auto leads rise in December–February with snowfall |
-| S5 | Contingency fee | 33% pre-suit, 40% after suit is filed |
-| S6 | Share of cases that go to suit | 15–30%, higher for truck and wrongful death |
-| S7 | Settlement value | Lognormal by case type and state; truck and wrongful death highest |
-| S8 | Time from sign to payment | Median 12–18 months; longer for truck and wrongful death |
-| S9 | Marketing effect | $75,000 a month × market size, about $10M a year (about 11% of fees). Leads rise with spend^0.35 (diminishing returns). Campaigns: Houston TV from Mar 2021 (+60%), Atlanta digital from Sep 2023 (+50%) |
-| S10 | Staff roles and capacity | Intake specialist 60 leads/month; case manager 70 open cases; demand writer 250 open cases; litigation paralegal 60 open suits; associate attorney 150 open cases. Staffed to 90% of trailing workload, with a 2–4 month hiring lag |
-| S11 | Turnover effect (**planted**) | Case managers above 1.3× benchmark caseload leave about twice as often |
-| S12 | Random seed | Fixed (42), so every run is reproducible |
-| S13 | Firm history | Simulated from Jan 2013 so caseloads and payments are mature by 2017, the first year of public data. Analysis uses 2017 onward |
-| S14 | Snapshot date | 31 Dec 2025. Cases not paid by then are Open, with no settlement yet |
-| S15 | Lost cases | 8% of signed cases end with no recovery |
-| S16 | Florida tort reform | Case values ×0.85 for Florida cases signed after 24 Mar 2023 |
-| S17 | COVID | Leads ×0.70 / 0.75 / 0.85 in Apr / May / Jun 2020 (fewer minor crashes in lockdown) |
-| S18 | Staff turnover | Base monthly quit rate 1.5–3.5% by role; ×1.4 in Jan–Mar (after bonuses), ×1.2 in Jul–Aug; ×1.3 when any role is overloaded |
-| S19 | Loaded staff cost per hour (for case margin) | Case manager $45, associate attorney $150, litigation paralegal $40 |
-| S20 | Case costs | The firm advances case costs (2-6% of settlement, plus $3k-15k if in suit). Won cases reimburse them from the settlement; lost cases are absorbed by the firm. Only absorbed costs reduce contribution margin |
+| S1 | Monthly leads per office | 120 × office market size (0.45 Savannah to 1.35 Houston) × crash demand index × trend × marketing effect. This produces about 1,700 leads per month firm-wide. |
+| S2 | Lead-to-signed conversion | Base conversion of 16–26% by case type, increased by faster callbacks and referrals. Overall conversion is approximately 28–30%. |
+| S3 | Response-time effect (**planted**) | Leads called back within 5 minutes sign at approximately 1.5× the rate of leads called back after 1 hour. |
+| S4 | Winter effect (**planted**) | Michigan and Ohio auto leads increase during December–February with snowfall. |
+| S5 | Contingency fee | 33% before suit and 40% after suit is filed. |
+| S6 | Share of cases that go to suit | 15–30%, with higher rates for truck and wrongful-death cases. |
+| S7 | Settlement value | Settlement values follow a lognormal distribution by case type and state. Truck and wrongful-death cases have the highest values. |
+| S8 | Time from sign to payment | Median duration of 12–18 months, with longer durations for truck and wrongful-death cases. |
+| S9 | Marketing effect | Marketing spend is $75,000 per month × market size, or approximately $10 million per year and about 11% of fees. Leads increase with spend^0.35, representing diminishing returns. Campaigns include Houston TV beginning March 2021 (+60%) and Atlanta digital beginning September 2023 (+50%). |
+| S10 | Staff roles and capacity | Intake specialist: 60 leads/month. Case manager: 70 open cases. Demand writer: 250 open cases. Litigation paralegal: 60 open suits. Associate attorney: 150 open cases. Staffing targets 90% of trailing workload with a 2–4 month hiring lag. |
+| S11 | Turnover effect (**planted**) | Case managers above 1.3× benchmark caseload leave at approximately twice the normal rate. |
+| S12 | Random seed | Fixed at 42 so every simulation run is reproducible. |
+| S13 | Firm history | Firm activity is simulated from January 2013 so caseloads and payments are mature by 2017, the first year of the public crash data used in the analysis. Analysis uses 2017 onward. |
+| S14 | Snapshot date | December 31, 2025. Cases that have not been paid by this date remain Open with no settlement recorded. |
+| S15 | Lost cases | 8% of signed cases end with no recovery. |
+| S16 | Florida tort reform | Case values are multiplied by 0.85 for Florida cases signed after March 24, 2023. |
+| S17 | COVID impact | Leads are multiplied by 0.70, 0.75, and 0.85 in April, May, and June 2020 respectively to represent reduced minor-crash activity during lockdowns. |
+| S18 | Staff turnover | Base monthly quit rate is 1.5–3.5% by role. The rate is multiplied by 1.4 in January–March, 1.2 in July–August, and 1.3 when any role is overloaded. |
+| S19 | Loaded staff cost per hour | Case manager: $45/hour. Associate attorney: $150/hour. Litigation paralegal: $40/hour. These rates are used for case-margin calculations. |
+| S20 | Case costs | The firm advances case costs equal to 2–6% of settlement value, plus $3,000–$15,000 when a case goes into suit. Won cases reimburse these costs from settlement proceeds. Lost cases are absorbed by the firm. Only absorbed costs reduce contribution margin. |
 
-## Known limitations
+## Plant-and-Recover Assumptions
 
-- FARS covers fatal crashes only, so absolute demand levels are estimates; seasonal shape and trend are the reliable parts.
-- Premises liability, dog bite and workers' comp have no public crash signal. Their seasonality is simulated and stated as such.
-- Firm results describe a simulated firm. The method, not the specific numbers, is what transfers to a real firm.
+Several assumptions are intentionally planted into the simulation so the analytical pipeline can be tested.
+
+These effects are not presented as measured findings from a real firm. They are known inputs used to validate whether the analysis can recover relationships that were intentionally introduced into the simulated data.
+
+| Planted Effect | Simulation Rule | Validation Purpose |
+| --- | --- | --- |
+| Response time | Callback within 5 minutes produces approximately 1.5× the signing rate of a callback after 1 hour | Tests whether intake-response speed can be detected in the analysis |
+| Winter auto demand | Michigan and Ohio auto leads increase during December–February with snowfall | Tests whether weather-related seasonal patterns can be recovered |
+| Caseload and turnover | Case managers above 1.3× benchmark caseload leave at approximately twice the normal rate | Tests whether workload pressure is reflected in turnover patterns |
+
+A fixed random seed of **42** is used so that the same inputs produce reproducible results across runs.
+
+## Known Limitations
+
+### FARS is a demand signal, not a complete injury dataset
+
+FARS covers fatal crashes only. It is therefore not a direct measure of total personal injury demand.
+
+The absolute demand levels generated from FARS are estimates. The seasonal shape and geographic patterns are the more reliable components of the signal.
+
+### Some case types do not have a public crash signal
+
+Premises liability, dog bite, and workers' compensation cases do not have a comparable public crash-based demand signal in this project.
+
+Their seasonality is therefore simulated and explicitly treated as an assumption rather than an observed relationship.
+
+### Firm results are simulated
+
+The law firm activity in this project is simulated.
+
+The specific lead counts, signed cases, settlement values, staffing levels, revenue, and margins should not be interpreted as actual results from a real law firm.
+
+The transferable part of the project is the **methodology**:
+
+- separating market demand from firm capture
+- using external demand signals for forecasting
+- measuring intake and conversion
+- connecting demand forecasts to staffing
+- connecting signed cases to revenue timing
+- evaluating office performance relative to market conditions
+
+## Interpretation Rule
+
+Throughout the project, public data and simulated firm data should be interpreted differently:
+
+- **Public data** provides the external demand, weather, and population signals.
+- **Simulated data** represents firm leads, cases, payments, marketing, staffing, and operating activity.
+- **Planted effects** are known relationships intentionally introduced into the simulation for validation.
+- **Forecasts and business metrics** are outputs of the analytical pipeline and should be interpreted within these assumptions and limitations.
+
+This distinction is maintained throughout the SQL transformations, validation tests, forecasting analysis, and Looker Studio dashboard.
