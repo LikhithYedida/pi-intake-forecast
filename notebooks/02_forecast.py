@@ -48,6 +48,12 @@ STATE_ORDER = ["MI", "OH", "PA", "GA", "FL", "TX"]
 FOLDS = [2022, 2023, 2024]           # each fold trains on all earlier years
 FORECAST_YEAR = 2025                 # first year after the data
 N_SIMS = 2000
+# Method settings, chosen automatically by select_method() on the 2022-2023 backtests:
+HALF_LIFE_YEARS: float | None = None  # recency weighting: an observation this many years old counts half
+BLEND = 0.0                           # weight on same-month-last-year in the final forecast (0 = model only)
+CANDIDATES = [(hl, b) for hl in (None, 3.0, 2.0, 1.5) for b in (0.0, 0.3, 0.5)]
+SELECTION_FOLDS = [2022, 2023]        # used to choose the method
+CONFIRMATION_FOLD = 2024              # held out from the choice, used to confirm it
 SEED = 42
 INTAKE_CAPACITY = 60                 # leads per intake specialist per month (assumption S10)
 STAFF_TO = "p80"                     # staff intake to the 80th percentile of forecast leads
@@ -110,9 +116,12 @@ def design(months: pd.Series, covid: pd.Series) -> np.ndarray:
     return X
 
 
-def fit_poisson(X: np.ndarray, y: np.ndarray, iters: int = 50, ridge: float = 1e-6) -> dict:
-    """Iteratively reweighted least squares for a log-link Poisson GLM.
-    Returns coefficients, their covariance (scaled by over-dispersion) and the dispersion phi."""
+def fit_poisson(X: np.ndarray, y: np.ndarray, iters: int = 50, ridge: float = 1e-6,
+                w: np.ndarray | None = None) -> dict:
+    """Iteratively reweighted least squares for a log-link Poisson GLM, with optional observation
+    weights w (recency weighting). Returns coefficients, their covariance (scaled by over-dispersion)
+    and the dispersion phi."""
+    w = np.ones(len(y)) if w is None else w
     keep = X.std(axis=0) > 0
     keep[0] = True
     Xk = X[:, keep]
@@ -121,22 +130,24 @@ def fit_poisson(X: np.ndarray, y: np.ndarray, iters: int = 50, ridge: float = 1e
     for _ in range(iters):
         mu = np.exp(np.clip(Xk @ beta, -20, 20))
         z = Xk @ beta + (y - mu) / mu
-        XtW = Xk.T * mu
+        XtW = Xk.T * (mu * w)
         new = np.linalg.solve(XtW @ Xk + ridge * np.eye(len(beta)), XtW @ z)
         if np.max(np.abs(new - beta)) < 1e-8:
             beta = new
             break
         beta = new
     mu = np.exp(np.clip(Xk @ beta, -20, 20))
-    dof = max(len(y) - len(beta), 1)
-    phi = max(1.0, float(((y - mu) ** 2 / mu).sum() / dof))          # Pearson over-dispersion
-    cov = phi * np.linalg.inv((Xk.T * mu) @ Xk + ridge * np.eye(len(beta)))
+    n_eff = w.sum() ** 2 / (w ** 2).sum()                              # effective sample size
+    dof = max(n_eff - len(beta), 1)
+    phi = max(1.0, float((w * (y - mu) ** 2 / mu).sum() / w.sum() * n_eff / dof))   # Pearson over-dispersion
+    cov = phi * np.linalg.inv((Xk.T * (mu * w)) @ Xk + ridge * np.eye(len(beta)))
     full = np.zeros(X.shape[1]); full[keep] = beta
     return dict(beta=full, keep=keep, cov=cov, phi=phi)
 
 
-def simulate(fit: dict, X: np.ndarray, rng: np.random.Generator, n: int = N_SIMS) -> np.ndarray:
+def simulate(fit: dict, X: np.ndarray, rng: np.random.Generator, n: int | None = None) -> np.ndarray:
     """Draws of future counts: coefficient uncertainty + negative-binomial noise with variance phi*mu."""
+    n = n or N_SIMS
     Xk = X[:, fit["keep"]]
     betas = rng.multivariate_normal(fit["beta"][fit["keep"]], fit["cov"], size=n, method="cholesky")
     mu = np.exp(np.clip(betas @ Xk.T, -20, 20))                         # n x horizon
@@ -150,7 +161,11 @@ def forecast_series(hist: pd.DataFrame, future: pd.DataFrame, rng: np.random.Gen
     """Simulated draws (N_SIMS x len(future)) for one series. Future months are never COVID."""
     if hist["y"].sum() == 0:
         return np.zeros((N_SIMS, len(future)))
-    fit = fit_poisson(design(hist["month"], hist["is_covid"]), hist["y"].to_numpy(float))
+    w = None
+    if HALF_LIFE_YEARS:
+        age = (hist["month"].max() - hist["month"]).dt.days.to_numpy() / 365.25
+        w = 0.5 ** (age / HALF_LIFE_YEARS)
+    fit = fit_poisson(design(hist["month"], hist["is_covid"]), hist["y"].to_numpy(float), w=w)
     return simulate(fit, design(future["month"], pd.Series(False, index=future.index)), rng)
 
 
@@ -166,13 +181,14 @@ def baselines(hist: pd.DataFrame, future: pd.DataFrame) -> pd.DataFrame:
 
 
 # %% Run one target (signed cases by state x case type, or leads by office)
-def run_target(df: pd.DataFrame, keys: list[str], rng: np.random.Generator) -> tuple[pd.DataFrame, dict]:
+def run_target(df: pd.DataFrame, keys: list[str], rng: np.random.Generator,
+               years: list[int] | None = None) -> tuple[pd.DataFrame, dict]:
     """Backtest folds + final forecast for every series. Returns long rows and the draws for aggregation."""
     rows, draws = [], {}
     df = df[df["month"] < f"{FORECAST_YEAR}-01-01"].sort_values("month")
     for key, g in df.groupby(keys):
         key = key if isinstance(key, tuple) else (key,)
-        for year in FOLDS + [FORECAST_YEAR]:
+        for year in years or FOLDS + [FORECAST_YEAR]:
             hist = g[g["month"] < f"{year}-01-01"]
             if year == FORECAST_YEAR:
                 future = pd.DataFrame({"month": pd.date_range(f"{year}-01-01", periods=12, freq="MS")})
@@ -182,6 +198,13 @@ def run_target(df: pd.DataFrame, keys: list[str], rng: np.random.Generator) -> t
                 actual = g[g["month"].dt.year == year]["y"].to_numpy(float)
             sims = forecast_series(hist, future, rng)
             base = baselines(hist, future)
+            if BLEND > 0:
+                # Combine with same-month-last-year: move each month's draws to the blended centre,
+                # keeping the model's spread (as a ratio).
+                model_mean = sims.mean(axis=0)
+                naive = base["naive"].to_numpy(float)
+                target = np.where(np.isnan(naive), model_mean, (1 - BLEND) * model_mean + BLEND * naive)
+                sims = sims * np.divide(target, model_mean, out=np.ones_like(target), where=model_mean > 0)
             draws[(key, year)] = sims
             q = np.percentile(sims, [2.5, 10, 50, 80, 90, 97.5], axis=0)
             for i, m in enumerate(future["month"]):
@@ -239,6 +262,55 @@ def annual_ranges(agg_draws: dict, label: dict | None = None) -> pd.DataFrame:
         name = gkey[0] if gkey else "Firm"
         out.append(dict(group=name, mean=total.mean(), p10=np.percentile(total, 10), p90=np.percentile(total, 90)))
     return pd.DataFrame(out).set_index("group")
+
+
+# %% Method selection: choose on 2022-2023, confirm on 2024
+def level_wapes(case_rows: pd.DataFrame, lead_rows: pd.DataFrame, years: list[int]) -> dict:
+    """Point-forecast WAPE (model and same-month-last-year) at each planning level for the given years."""
+    c = case_rows[case_rows["origin_year"].isin(years)]
+    l = lead_rows[lead_rows["origin_year"].isin(years)]
+    firm = c.groupby("month")[["actual", "forecast", "naive"]].sum()
+    state = c.groupby(["state_abbr", "month"])[["actual", "forecast", "naive"]].sum()
+    out = {}
+    for name, d in [("firm", firm), ("state", state), ("segment", c), ("office_leads", l)]:
+        out[name] = (wape(d["actual"], d["forecast"]), wape(d["actual"], d["naive"]))
+    return out
+
+
+def select_method(cases: pd.DataFrame, leads: pd.DataFrame) -> tuple[tuple, pd.DataFrame]:
+    """Try every candidate setting. Score = average across the four levels of model WAPE / baseline WAPE
+    on the SELECTION folds only (below 1.00 = beats same-month-last-year). The winner is then checked on
+    the CONFIRMATION fold, which played no part in the choice, so the reported accuracy is not flattered
+    by the selection itself."""
+    global HALF_LIFE_YEARS, BLEND, N_SIMS
+    saved = (HALF_LIFE_YEARS, BLEND, N_SIMS)
+    N_SIMS = 300                                   # point forecasts only; fewer draws is enough
+    results = []
+    years = SELECTION_FOLDS + [CONFIRMATION_FOLD]
+    for hl, blend in CANDIDATES:
+        HALF_LIFE_YEARS, BLEND = hl, blend
+        rng = np.random.default_rng(SEED)
+        c_rows, _ = run_target(cases, ["state_abbr", "case_type"], rng, years=years)
+        l_rows, _ = run_target(leads, ["office_id", "office", "state_abbr"], rng, years=years)
+        sel = level_wapes(c_rows, l_rows, SELECTION_FOLDS)
+        conf = level_wapes(c_rows, l_rows, [CONFIRMATION_FOLD])
+        results.append(dict(
+            half_life=hl, blend=blend,
+            selection_score=np.mean([m / n for m, n in sel.values()]),
+            confirmation_score=np.mean([m / n for m, n in conf.values()]),
+            **{f"sel_{k}": v[0] for k, v in sel.items()},
+            **{f"conf_{k}": v[0] for k, v in conf.items()},
+            **{f"conf_naive_{k}": v[1] for k, v in conf.items()}))
+    HALF_LIFE_YEARS, BLEND, N_SIMS = saved
+    table = pd.DataFrame(results).sort_values("selection_score").reset_index(drop=True)
+    best = table.iloc[0]
+    return (None if pd.isna(best["half_life"]) else float(best["half_life"]), float(best["blend"])), table
+
+
+def describe_method(hl: float | None, blend: float) -> str:
+    parts = ["all years weighted equally" if not hl else f"recent years weighted more (half-life {hl:g} years)"]
+    parts.append("model only" if blend == 0 else f"blended {1 - blend:.0%} model / {blend:.0%} same-month-last-year")
+    return ", ".join(parts)
 
 
 # %% Accuracy
@@ -336,11 +408,16 @@ def accuracy_chart(table: pd.DataFrame, path: Path) -> None:
 
 # %% Report
 def write_report(levels: dict[str, pd.DataFrame], acc: dict[str, dict], tiers: pd.DataFrame,
-                 staffing: pd.DataFrame, cases_hist: pd.DataFrame, annual: pd.DataFrame) -> str:
+                 staffing: pd.DataFrame, cases_hist: pd.DataFrame, annual: pd.DataFrame,
+                 selection: pd.DataFrame) -> str:
     last_year = cases_hist[cases_hist["month"].dt.year == FORECAST_YEAR - 1]["y"].sum()
     total, lo, hi = annual.loc["Firm", ["mean", "p10", "p90"]]
     a_f, a_s, a_t = acc["firm"], acc["state"], acc["state_type"]
-    cut = 1 - a_f["model"] / a_f["naive"]
+    best = selection.iloc[0]
+    conf = {k: (best[f"conf_{k}"], best[f"conf_naive_{k}"]) for k in ["firm", "state", "segment", "office_leads"]}
+    wins = [k for k, (m, n) in conf.items() if m < n]
+    firm_m, firm_n = conf["firm"]
+    cut = 1 - firm_m / firm_n
 
     st = annual.drop(index="Firm")
     hist_by_state = cases_hist[cases_hist["month"].dt.year == FORECAST_YEAR - 1].groupby("state_abbr")["y"].sum()
@@ -350,7 +427,7 @@ def write_report(levels: dict[str, pd.DataFrame], acc: dict[str, dict], tiers: p
     trough_n, peak_n = int(peak.min()), int(peak.max())
     peak_month = MONTHS[peak.idxmax().month - 1]
 
-    beats = a_f["model"] < a_f["naive"] and a_s["model"] < a_s["naive"]
+    level_names = {"firm": "firm", "state": "state", "segment": "segment", "office_leads": "office-lead"}
     lines = [
         "# Forecast Report",
         "",
@@ -361,14 +438,35 @@ def write_report(levels: dict[str, pd.DataFrame], acc: dict[str, dict], tiers: p
         "## Headline",
         "",
         f"The firm should sign about **{total:,.0f} cases in {FORECAST_YEAR}** (80% range {lo:,.0f}-{hi:,.0f}), "
-        f"vs {last_year:,.0f} in "
-        f"{FORECAST_YEAR - 1} ({total / last_year - 1:+.1%}). On years it never saw, the model's firm-level monthly "
-        f"error was **{a_f['model']:.1%}**, {'a ' + f'{cut:.0%}' + ' improvement on' if cut > 0 else 'no better than'} "
-        f"the same-month-last-year method ({a_f['naive']:.1%}). "
-        + ("It is ready for staffing and budget planning at firm and state level." if beats else
-           "It does not yet beat the simple baseline everywhere, so use it alongside the baseline, not instead of it."),
+        f"vs {last_year:,.0f} in {FORECAST_YEAR - 1} ({total / last_year - 1:+.1%}). "
+        f"On {CONFIRMATION_FOLD}, a year held out from every modeling choice, the firm-level monthly error was "
+        f"**{firm_m:.1%}** vs {firm_n:.1%} for the same-month-last-year method"
+        + (f" ({cut:.0%} better)" if cut > 0 else "") + ". "
+        + (f"The forecast beats that baseline at all four planning levels, so it is ready for staffing and budget "
+           f"planning." if len(wins) == 4 else
+           f"It beats the baseline at {len(wins)} of 4 levels ({', '.join(level_names[w] for w in wins)}); "
+           f"where it does not, use the two side by side."),
+        "",
+        "## How the method was chosen",
+        "",
+        f"{len(selection)} candidate methods were scored on {' and '.join(map(str, SELECTION_FOLDS))} only: plain or "
+        "recency-weighted models, alone or blended with same-month-last-year (combining forecasts is one of the most "
+        "reliable ways to cut error). Score = average across the four levels of model error / baseline error; "
+        f"below 1.00 beats the baseline. The winner was then checked on {CONFIRMATION_FOLD}, which played no part "
+        f"in the choice. **Chosen: {describe_method(HALF_LIFE_YEARS, BLEND)}.**",
+        "",
+        f"| Rank | Method | Score {'-'.join(map(str, SELECTION_FOLDS))} (choice) | Score {CONFIRMATION_FOLD} (check) |",
+        "| ---: | --- | ---: | ---: |",
+        *[f"| {i + 1} | {describe_method(None if pd.isna(r.half_life) else r.half_life, r.blend)} | "
+          f"{r.selection_score:.3f} | {r.confirmation_score:.3f} |" for i, r in enumerate(selection.head(5).itertuples())],
+        "",
+        f"**{CONFIRMATION_FOLD} check, by level** (model vs same month last year): "
+        + "; ".join(f"{level_names[k]} {m:.1%} vs {n:.1%}" for k, (m, n) in conf.items()) + ".",
         "",
         "## Accuracy on unseen years",
+        "",
+        f"All three backtest years with the chosen method. {' and '.join(map(str, SELECTION_FOLDS))} also informed "
+        f"the choice of method, so the {CONFIRMATION_FOLD} check above is the cleanest single measure.",
         "",
         "| Level | Series | Model WAPE | Same month last year | Seasonal average | 80% range held | 95% range held |",
         "| --- | ---: | ---: | ---: | ---: | ---: | ---: |",
@@ -477,9 +575,14 @@ def save_forecasts(levels: dict[str, pd.DataFrame]) -> None:
 
 # %% Run everything
 def run(data: dict[str, pd.DataFrame], upload: bool = True) -> str:
+    global HALF_LIFE_YEARS, BLEND
     FIG_DIR.mkdir(parents=True, exist_ok=True)
-    rng = np.random.default_rng(SEED)
     cases, leads = data["cases"], data["leads"]
+
+    print(f"Choosing the method: {len(CANDIDATES)} candidates scored on {SELECTION_FOLDS}...")
+    (HALF_LIFE_YEARS, BLEND), selection = select_method(cases, leads)
+    print(f"Chosen: {describe_method(HALF_LIFE_YEARS, BLEND)}")
+    rng = np.random.default_rng(SEED)
 
     print("Forecasting 48 state x case-type series (3 backtest years + final)...")
     st_rows, st_draws = run_target(cases, ["state_abbr", "case_type"], rng)
@@ -520,7 +623,7 @@ def run(data: dict[str, pd.DataFrame], upload: bool = True) -> str:
     accuracy_chart(acc_table, FIG_DIR / "forecast_accuracy.png")
 
     annual = pd.concat([annual_ranges(firm_draws), annual_ranges(state_draws)])
-    text = write_report(levels, acc, tiers, staffing, cases, annual)
+    text = write_report(levels, acc, tiers, staffing, cases, annual, selection)
     print(f"Wrote {REPORT} and 2 charts in {FIG_DIR}/")
     if upload:
         save_forecasts(levels)

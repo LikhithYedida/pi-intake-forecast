@@ -208,3 +208,10 @@ Lesson: a hypothesis in the README is a claim. When the data overturns it, the R
 | 4 | The model was slightly worse than the seasonal average for small segments, and the report did not say so | Report now states plainly where the model does not win and recommends rolling small segments up |
 | 5 | Staffing table said "quietest Jan, busiest Jan" for flat offices | Shows "Flat all year" |
 | 6 | Accuracy chart led with the smallest gain (7%) | Data-driven title: beats the baseline at every level (7-20%), or says at how many levels it does |
+
+### v2: first real-data result, and the fix
+- **Real-data result (v1):** the model beat same-month-last-year at state (12.5% vs 14.0%), segment (28.3% vs 33.8%) and office-lead level (10.3% vs 11.2%), but **lost at firm level (6.3% vs 5.7%)**. The report said so in its headline, as designed. Warning signs: Ohio forecast +10.5%, Pennsylvania +9.1% vs 2024.
+- **Diagnosis:** one linear trend fitted through 2017-2024 is bent by the COVID dip and rebound; same-month-last-year carries the most recent level automatically.
+- **Fix:** two standard remedies offered as candidates: recency weighting (half-life 1.5, 2 or 3 years) and blending with same-month-last-year (30% or 50%); forecast combination is among the most reliable ways to cut error.
+- **Selection without fooling ourselves:** 12 candidates scored on 2022-2023 only (average model/baseline error ratio across the four levels); the winner is then checked on 2024, which plays no part in the choice. The headline now quotes the 2024 check, the one number no modeling decision could flatter.
+- The notebook runs the selection itself every time, so the method adapts if the data changes. On stand-in data it chose a 70/30 model/baseline blend, which beat the baseline at all four levels on the held-out year.
