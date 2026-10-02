@@ -56,3 +56,22 @@ SELECT ROUND(SUM(ROUND(fee - firm_absorbed_costs - staff_cost - marketing_cost, 
              - SUM(contribution_margin), 2) AS difference
 FROM `pi-intake-forecast.mart.case_economics`
 WHERE status = 'Closed';
+
+-- Check 9: dashboard forecast ties to the forecast table (firm, 2025).
+-- Expect: difference = 0
+SELECT ROUND((SELECT SUM(forecast_2025) FROM `pi-intake-forecast.mart.dash_forecast`
+              WHERE state = 'All states' AND case_type = 'All case types')
+           - (SELECT SUM(forecast) FROM `pi-intake-forecast.mart.forecast_monthly`
+              WHERE level = 'firm' AND kind = 'forecast'), 0) AS difference;
+
+-- Check 10: dashboard history ties to the warehouse (firm signed cases, 2017-2024).
+-- Expect: difference = 0
+SELECT (SELECT SUM(actual) FROM `pi-intake-forecast.mart.dash_forecast`
+        WHERE state = 'All states' AND case_type = 'All case types')
+     - (SELECT SUM(signed_cases) FROM `pi-intake-forecast.mart.office_month`) AS difference;
+
+-- Check 11: dashboard profit ties to case economics (contribution margin, closed cases).
+-- Expect: difference = 0
+SELECT ROUND((SELECT SUM(contribution_margin) FROM `pi-intake-forecast.mart.dash_case_profit`)
+           - (SELECT SUM(contribution_margin) FROM `pi-intake-forecast.mart.case_economics`
+              WHERE status = 'Closed'), 0) AS difference;

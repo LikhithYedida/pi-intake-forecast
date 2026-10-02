@@ -127,5 +127,6 @@ reports/           scope, assumptions, data dictionary, build log, director brie
 - [x] Data dictionary and plant-and-recover tests
 - [x] Seasonality analysis ([findings](reports/seasonality_findings.md))
 - [x] 12-month forecast, backtested against baselines ([report](reports/forecast_report.md))
-- [ ] Looker Studio dashboard
+- [x] Dashboard data layer (`mart.dash_*` views) and [build guide](reports/dashboard_guide.md)
+- [ ] Looker Studio dashboard (published)
 - [ ] Director brief

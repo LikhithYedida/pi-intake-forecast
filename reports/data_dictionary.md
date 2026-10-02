@@ -22,8 +22,17 @@ Generated from the live BigQuery warehouse `pi-intake-forecast` on 2026-10-01 by
 | Table | Rows | Purpose |
 | --- | ---: | --- |
 | `mart.case_economics` | 57,579 | THE PROFIT TABLE. |
+| `mart.dash_case_profit` | 0 | Profit page. |
+| `mart.dash_forecast` | 0 | Forecast page. |
+| `mart.dash_kpis` | 0 | Overview page scorecards. |
+| `mart.dash_office_scorecard` | 0 | Office scorecard page. |
+| `mart.dash_seasonal` | 0 | Seasonal calendar page. |
+| `mart.dash_staffing_plan` | 0 | Intake staffing plan for 2025. |
+| `mart.dash_workforce` | 0 | Workforce page. |
+| `mart.forecast_monthly` | 3,216 | . |
 | `mart.office_casetype_month` | 9,216 | THE FORECASTING TABLE. |
 | `mart.office_month` | 1,152 | THE SCORECARD TABLE. |
+| `mart.seasonal_index` | 756 | . |
 | `mart.workforce_month` | 5,754 | THE WORKFORCE TABLE. |
 | `clean.cases` | 57,579 | Every signed case, with timing and the staff cost of working it. |
 | `clean.dim_month` | 156 | Calendar of months with the flags every analysis needs. |
@@ -46,7 +55,7 @@ Generated from the live BigQuery warehouse `pi-intake-forecast` on 2026-10-01 by
 
 ## mart layer
 
-Business-ready tables. One per question; these feed the models and the dashboard.
+Business-ready tables, one per question, plus the dash_* views that feed Looker Studio.
 
 ### `mart.case_economics`
 
@@ -80,6 +89,176 @@ Rows: 57,579
 | `staff_cost` | FLOAT | Case manager, attorney and paralegal hours x loaded hourly rates. |
 | `marketing_cost` | FLOAT | Acquisition cost: office-month spend / cases signed that month. |
 | `contribution_margin` | FLOAT | fee - firm_absorbed_costs - staff_cost - marketing_cost. Before overhead. |
+
+### `mart.dash_case_profit`
+
+Profit page. Closed-case economics by state, case type, lead source and close year. All components are sums, so any filter combination adds up; build averages and rates as Looker calculated fields. Built by sql/36_dash_case_profit.sql.
+
+Rows: 0
+
+| Column | Type | Meaning |
+| --- | --- | --- |
+| `state` | STRING |  |
+| `case_type` | STRING | One of 8 standard case types. |
+| `source` | STRING | Lead source: TV, Digital, Referral, Organic web, Billboard & radio. |
+| `close_year` | INTEGER |  |
+| `closed_cases` | INTEGER |  |
+| `won_cases` | INTEGER |  |
+| `settlements` | FLOAT |  |
+| `fees` | FLOAT |  |
+| `firm_absorbed_costs` | FLOAT | Advanced costs the firm absorbed (lost cases only; won cases are reimbursed). |
+| `staff_cost` | FLOAT | Case manager, attorney and paralegal hours x loaded hourly rates. |
+| `marketing_cost` | FLOAT | Acquisition cost: office-month spend / cases signed that month. |
+| `contribution_margin` | FLOAT | fee - firm_absorbed_costs - staff_cost - marketing_cost. Before overhead. |
+| `total_months_to_close` | FLOAT |  |
+
+### `mart.dash_forecast`
+
+Forecast page. One continuous timeline per level: monthly actuals 2017-2024, the 2024 held-out backtest, and the 2025 forecast with its 80% range. Built by sql/32_dash_forecast.sql.
+
+Rows: 0
+
+| Column | Type | Meaning |
+| --- | --- | --- |
+| `level` | STRING |  |
+| `state` | STRING |  |
+| `state_order` | INTEGER |  |
+| `case_type` | STRING | One of 8 standard case types. |
+| `month` | DATE | First day of the month. |
+| `actual` | FLOAT |  |
+| `backtest_2024` | FLOAT | What the model forecast for 2024 using only 2017-2023 data (held-out check). |
+| `forecast_2025` | FLOAT | Forecast signed cases for the month (2025). |
+| `range_low` | FLOAT | Lower edge of the 80% forecast range. |
+| `range_high` | FLOAT | Upper edge of the 80% forecast range. |
+
+### `mart.dash_kpis`
+
+Overview page scorecards. One row of headline numbers. Built by sql/30_dash_kpis.sql.
+
+Rows: 0
+
+| Column | Type | Meaning |
+| --- | --- | --- |
+| `forecast_signed_2025` | FLOAT |  |
+| `signed_2024` | INTEGER |  |
+| `forecast_change_vs_2024` | FLOAT |  |
+| `model_error_2024` | FLOAT |  |
+| `baseline_error_2024` | FLOAT |  |
+| `leads_2024` | INTEGER |  |
+| `sign_rate_2024` | FLOAT |  |
+| `median_callback_min_2024` | FLOAT |  |
+| `marketing_2024` | FLOAT |  |
+| `cost_per_signed_case_2024` | FLOAT |  |
+| `fees_2024` | FLOAT |  |
+| `contribution_margin_2024` | FLOAT |  |
+| `contribution_margin_rate_2024` | FLOAT |  |
+
+### `mart.dash_office_scorecard`
+
+Office scorecard page. One row per office per year, with the counts needed to compute rates correctly in Looker Studio, plus 2024 leads against the forecast's expectation for that year. Built by sql/33_dash_office_scorecard.sql.
+
+Rows: 0
+
+| Column | Type | Meaning |
+| --- | --- | --- |
+| `office` | STRING |  |
+| `office_id` | STRING | Three-letter office code (DET, MIA, ...). |
+| `state` | STRING |  |
+| `year` | INTEGER |  |
+| `leads` | INTEGER | Inbound leads in the period. |
+| `signed_cases` | INTEGER | Leads that signed a retainer in the period. |
+| `leads_called_within_5min` | FLOAT |  |
+| `marketing_spend` | FLOAT | Marketing spend in US dollars. |
+| `staff_quits` | INTEGER |  |
+| `avg_monthly_median_callback_min` | FLOAT |  |
+| `avg_intake_load` | FLOAT |  |
+| `sign_rate` | FLOAT | signed_cases / leads. |
+| `signed_change_vs_prior_year` | FLOAT |  |
+| `leads_expected` | FLOAT |  |
+| `leads_vs_expected` | FLOAT | 2024 leads vs the forecast's expectation for 2024 (+5% = 5% above expectation). |
+
+### `mart.dash_seasonal`
+
+Seasonal calendar page. Seasonal index by state, case type and month. Built by sql/31_dash_seasonal.sql.
+
+Rows: 0
+
+| Column | Type | Meaning |
+| --- | --- | --- |
+| `state` | STRING |  |
+| `state_order` | INTEGER |  |
+| `case_type` | STRING | One of 8 standard case types. |
+| `month_num` | INTEGER |  |
+| `month_name` | STRING |  |
+| `seasonal_index` | FLOAT | Seasonal index: 100 = an average month. |
+| `pct_vs_average_month` | FLOAT |  |
+| `signal` | STRING |  |
+| `avg_monthly_signed_cases` | FLOAT |  |
+
+### `mart.dash_staffing_plan`
+
+Intake staffing plan for 2025. Specialists needed per office per month, staffed to the 80th percentile of forecast leads at 60 leads per specialist (assumption S10), against December 2024 headcount. Built by sql/34_dash_staffing_plan.sql.
+
+Rows: 0
+
+| Column | Type | Meaning |
+| --- | --- | --- |
+| `office` | STRING |  |
+| `state` | STRING |  |
+| `month` | DATE | First day of the month. |
+| `month_name` | STRING |  |
+| `leads_forecast` | FLOAT |  |
+| `leads_p80` | FLOAT |  |
+| `specialists_needed` | INTEGER | Intake specialists needed: 80th percentile of forecast leads / 60 per specialist. |
+| `specialists_dec_2024` | INTEGER |  |
+| `gap_vs_dec_2024` | INTEGER |  |
+
+### `mart.dash_workforce`
+
+Workforce page. Staff-months, quits and overloaded staff-months by office, role, year and calendar month. Compute quit rate and overload share in Looker as SUM(quits) / SUM(staff_months). Built by sql/35_dash_workforce.sql.
+
+Rows: 0
+
+| Column | Type | Meaning |
+| --- | --- | --- |
+| `office` | STRING |  |
+| `state` | STRING |  |
+| `role` | STRING |  |
+| `year` | INTEGER |  |
+| `month_num` | INTEGER |  |
+| `month_name` | STRING |  |
+| `staff_months` | INTEGER |  |
+| `quits` | INTEGER | Staff who left that month. |
+| `overloaded_staff_months` | FLOAT |  |
+| `overtime_hours` | FLOAT | Overtime hours that month. |
+
+### `mart.forecast_monthly`
+
+
+
+Rows: 3,216
+
+| Column | Type | Meaning |
+| --- | --- | --- |
+| `level` | STRING |  |
+| `metric` | STRING |  |
+| `state_abbr` | STRING | Two-letter state code. |
+| `case_type` | STRING | One of 8 standard case types. |
+| `office_id` | STRING | Three-letter office code (DET, MIA, ...). |
+| `office` | STRING |  |
+| `month` | DATE | First day of the month. |
+| `origin_year` | INTEGER |  |
+| `kind` | STRING |  |
+| `actual` | FLOAT |  |
+| `forecast` | FLOAT |  |
+| `p025` | FLOAT |  |
+| `p10` | FLOAT |  |
+| `p50` | FLOAT |  |
+| `p80` | FLOAT |  |
+| `p90` | FLOAT |  |
+| `p975` | FLOAT |  |
+| `naive` | INTEGER |  |
+| `seasonal_mean` | FLOAT |  |
 
 ### `mart.office_casetype_month`
 
@@ -147,6 +326,25 @@ Rows: 1,152
 | `intake_load` | FLOAT |  |
 | `case_manager_load` | FLOAT |  |
 | `staff_quits` | INTEGER |  |
+
+### `mart.seasonal_index`
+
+
+
+Rows: 756
+
+| Column | Type | Meaning |
+| --- | --- | --- |
+| `state_abbr` | STRING | Two-letter state code. |
+| `case_type` | STRING | One of 8 standard case types. |
+| `month_num` | INTEGER |  |
+| `month_name` | STRING |  |
+| `seasonal_index` | FLOAT | Seasonal index: 100 = an average month. |
+| `ci_low` | FLOAT |  |
+| `ci_high` | FLOAT |  |
+| `significant` | BOOLEAN |  |
+| `years_used` | INTEGER |  |
+| `avg_monthly_signed_cases` | FLOAT |  |
 
 ### `mart.workforce_month`
 

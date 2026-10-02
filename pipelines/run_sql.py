@@ -1,7 +1,7 @@
 """
 Run the warehouse SQL against BigQuery, in file-number order.
 
-  python pipelines/run_sql.py            # build clean (1x) and mart (2x) layers
+  python pipelines/run_sql.py            # build clean (1x), mart (2x) and dashboard views (3x)
   python pipelines/run_sql.py --checks   # run sql/checks/mart_checks.sql and show results
   python pipelines/run_sql.py sql/21_*.sql   # run specific files only
 
@@ -16,7 +16,7 @@ from pathlib import Path
 from google.cloud import bigquery
 
 PROJECT = "pi-intake-forecast"
-DEFAULT_PATTERNS = ["sql/1*.sql", "sql/2*.sql"]
+DEFAULT_PATTERNS = ["sql/1*.sql", "sql/2*.sql", "sql/3*.sql"]
 CHECKS_FILE = Path("sql/checks/mart_checks.sql")
 
 
@@ -29,9 +29,11 @@ def build(client: bigquery.Client, patterns: list[str]) -> None:
         job = client.query(f.read_text(encoding="utf-8"))
         job.result()
         target = job.ddl_target_table
-        rows = client.get_table(target).num_rows if target else "-"
         name = f"{target.dataset_id}.{target.table_id}" if target else ""
-        print(f"  {f.name:40s} -> {name:32s} {rows:>9,} rows  ({time.time() - start:.1f}s)")
+        table = client.get_table(target) if target else None
+        size = "view" if table is not None and table.table_type == "VIEW" else \
+            f"{table.num_rows:,} rows" if table is not None else "-"
+        print(f"  {f.name:40s} -> {name:34s} {size:>13s}  ({time.time() - start:.1f}s)")
 
 
 def checks(client: bigquery.Client) -> None:

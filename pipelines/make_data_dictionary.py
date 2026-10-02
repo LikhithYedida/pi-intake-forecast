@@ -23,7 +23,7 @@ from pathlib import Path
 
 PROJECT = "pi-intake-forecast"
 DATASETS = [
-    ("mart", "Business-ready tables. One per question; these feed the models and the dashboard."),
+    ("mart", "Business-ready tables, one per question, plus the dash_* views that feed Looker Studio."),
     ("clean", "Tidy, keyed and flagged versions of the raw tables."),
     ("raw", "Data exactly as loaded: public sources and the simulated firm systems."),
 ]
@@ -106,6 +106,14 @@ COLUMN_NOTES = {
     "is_after_fl_reform": "From Apr 2023: Florida tort reform in effect.",
     "crashes_per_100k": "Fatal crashes per 100,000 residents.",
     "has_office": "True if the firm has an office in the county.",
+    "forecast_2025": "Forecast signed cases for the month (2025).",
+    "backtest_2024": "What the model forecast for 2024 using only 2017-2023 data (held-out check).",
+    "range_low": "Lower edge of the 80% forecast range.",
+    "range_high": "Upper edge of the 80% forecast range.",
+    "leads_vs_expected": "2024 leads vs the forecast's expectation for 2024 (+5% = 5% above expectation).",
+    "specialists_needed": "Intake specialists needed: 80th percentile of forecast leads / 60 per specialist.",
+    "seasonal_index": "Seasonal index: 100 = an average month.",
+    "contribution_margin_rate": "contribution margin / fees.",
 }
 
 
@@ -114,7 +122,7 @@ def sql_purposes() -> dict[str, str]:
     purposes = {}
     for f in sorted(Path("sql").glob("*.sql")):
         text = f.read_text(encoding="utf-8")
-        target = re.search(r"CREATE OR REPLACE TABLE `[^.`]+\.(\w+)\.(\w+)`", text)
+        target = re.search(r"CREATE OR REPLACE (?:TABLE|VIEW) `[^.`]+\.(\w+)\.(\w+)`", text)
         if not target:
             continue
         lines, capture = [], False

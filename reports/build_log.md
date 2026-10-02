@@ -215,3 +215,17 @@ Lesson: a hypothesis in the README is a claim. When the data overturns it, the R
 - **Fix:** two standard remedies offered as candidates: recency weighting (half-life 1.5, 2 or 3 years) and blending with same-month-last-year (30% or 50%); forecast combination is among the most reliable ways to cut error.
 - **Selection without fooling ourselves:** 12 candidates scored on 2022-2023 only (average model/baseline error ratio across the four levels); the winner is then checked on 2024, which plays no part in the choice. The headline now quotes the 2024 check, the one number no modeling decision could flatter.
 - The notebook runs the selection itself every time, so the method adapts if the data changes. On stand-in data it chose a 70/30 model/baseline blend, which beat the baseline at all four levels on the held-out year.
+
+## 2026-10-01: Dashboard layer
+
+### What was built
+- `sql/30-36_dash_*.sql`: seven views in `mart`, one per dashboard need: KPIs, seasonal calendar, forecast timeline, office scorecard, staffing plan, workforce, case profit. Views, not tables, so the dashboard always shows the latest build with nothing extra to refresh.
+- `reports/dashboard_guide.md`: page-by-page Looker Studio specification (charts, fields, filters, calculated fields, finding-led titles, publish checklist).
+- `run_sql.py` now builds the views too (`sql/3*.sql`) and reports them as views.
+- Checks 9-11: the dashboard forecast, history and contribution margin tie back to their warehouse sources.
+
+### Design decisions
+- **Counts in the views, rates in Looker.** Rates (sign rate, quit rate, margin rate) are calculated fields over sums, so they stay correct under any filter. Averaging pre-computed rates would weight a small office like a large one.
+- **One row belongs to exactly one forecast level** (firm, state, segment), selected by the state and case-type filters, so the forecast chart can never double count.
+- **Offices judged against expectation.** The scorecard compares 2024 leads with what the forecast expected for 2024, so seasonality and trend are already allowed for.
+- **No rounding of money in grouped views.** Rounding each group drifts the total and would make Check 11 fail for the wrong reason.
